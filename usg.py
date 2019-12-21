@@ -109,17 +109,17 @@ class Environment:
                 n1 = self.cells[pulse.position].density
                 n2 = self.cells[nextMove].density
                 T, R, reversePhase = calcCoeffients(n1, n2)
-                pulse.power = T
+                pulse.power = pulse.power * T
                 if R != 0:
                     print("Old pulse has power {}".format(T))
                     # create new pulse
                     if pulse.usesTrajectory:
                         currentStep = pulse.currentStep - 1
-                        reflectedPulse = SoundPulse(R, pulse.trajectory[currentStep], pulse.trajectory, currentStep)
+                        reflectedPulse = SoundPulse(pulse.power * R, pulse.trajectory[currentStep], pulse.trajectory, currentStep)
                     else:
                         reflectedDirection = _mul(pulse.direction, (-1))
                         reflectedPosition = _add(pulse.position, reflectedDirection)
-                        reflectedPulse = SoundPulse(R, reflectedPosition, reflectedDirection)
+                        reflectedPulse = SoundPulse(pulse.power * R, reflectedPosition, reflectedDirection)
                     if reversePhase:
                         reflectedPulse.phase = -1
                     print("Created new pulse via reflection {} - power {}".format(reflectedPulse.position, reflectedPulse.power))
@@ -149,13 +149,15 @@ image = load(path)
 row, cow = image.shape
 mid = int(cow/2)
 tranPos = (0, mid)
+np.set_printoptions(threshold=sys.maxsize)
+print(image)
 print("Transceiver location: {}".format(tranPos))
 print("Image size: {}".format(image.shape))
 env = Environment(image, tranPos, 0)
 env.createPulse(tranPos, (1,0))
 env.createPulse(tranPos, (1,0))
 env.log()
-env.runFor(100, False)
+env.runFor(500, False)
 result = env.history
 print(env.history)
 cv2.imshow("Image", image)
