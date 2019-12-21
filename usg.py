@@ -157,7 +157,7 @@ env = Environment(image, tranPos, 0)
 env.createPulse(tranPos, (1,0))
 env.createPulse(tranPos, (1,0))
 env.log()
-env.runFor(500, False)
+env.runFor(200, False)
 result = env.history
 print(env.history)
 cv2.imshow("Image", image)
