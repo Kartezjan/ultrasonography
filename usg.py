@@ -3,8 +3,9 @@ import matplotlib.pyplot as plt
 import sys
 import numpy as np
 from ast import literal_eval as make_tuple
+from math import sqrt, ceil, floor
 import operator
-from beam_maker import makeBeams
+from beam_maker import makeBeams, calculatePoint
 
 
 def scanl(f, base, l):
@@ -189,6 +190,16 @@ def load(path):
     image = cv2.imread(path)
     return cv2.imread(path, cv2.IMREAD_GRAYSCALE)
 
+def normalizeImage(image):
+    minv = np.amin(image)
+    maxv = np.amax(image)
+    print("MIN {} MAX {}".format(minv, maxv))
+    if maxv - minv == 0:
+        print("Division by 0 in normalizeImage function.")
+        exit(-1)
+    adjusted = [int(((x - minv) / (maxv - minv))*255.0) for x in np.nditer(image)]
+    return np.array(adjusted, dtype=np.uint8).reshape(image.shape)
+
 def makeImage(transceiverHistory):
     transceiverHistory = [x * (-1) for x in transceiverHistory]
     strip = list(scanl(operator.add, 0, transceiverHistory))
@@ -198,8 +209,23 @@ def makeImage(transceiverHistory):
     adjusted = [[int(((x - minv) / (maxv - minv))*255.0)]*stripWidth for x in strip]
     image = np.array(adjusted, dtype=np.uint8).reshape((len(strip), stripWidth))
     cv2.imshow("Image created from transceiver", image)
+    cv2.imwrite('result.png', image)
     plt.plot(range(0,len(strip)), strip)
     plt.show()
+
+def makeImage2D(transceiverHistory, time):
+    mid = (int(time/2), int(time/2))
+    r = time*2 # Inscibed circle
+    image = np.zeros((r, r), dtype=np.float).reshape((r,r))
+    for angle, angleHistory in transceiverHistory.items():
+        integrated = list(scanl(operator.add, 0.0, angleHistory))
+        for i in range(0, len(integrated) - 1):
+            point = calculatePoint(i, angle)
+            # Translate to center.
+            point = _add(point, mid)
+            image[point] += integrated[i]
+    normalized = normalizeImage(image)
+    cv2.imwrite('result.png', normalized)
 
 def print_help():
     print("usage: usg <image_path> [<flag> <flag_value>]")
@@ -231,7 +257,7 @@ if len(sys.argv) < 2:
     exit(1)
 path = sys.argv[1];
 allowReflections = False
-time = 3000
+time = 1000
 image = load(path)
 row, cow = image.shape
 mid = int(cow/2)
@@ -257,15 +283,15 @@ print("Image size: {}".format(image.shape))
 print(allowReflections)
 env = Environment(image, tranPos, 0, allowReflections)
 angleRange = (0, 360)
-step = 1
+step = 0.2
 angles = [x for x in range(angleRange[0], angleRange[1], step)]
 beams = makeBeams(image.shape, angleRange, step)
 beams = [translate(beam, tranPos) for beam in beams]
 for beam in beams:
     env.createPulseWithTrajectory(tranPos, beam, 1, angles.pop(0))
 env.runFor(time, True)
-result = env.history[0]
+result = env.history
 cv2.imshow("Image", image)
-plt.plot(range(0,len(result)),result)
-plt.show()
-makeImage(result)
+#plt.plot(range(0,len(result)),result)
+#plt.show()
+makeImage2D(result, time)
