@@ -257,7 +257,7 @@ if len(sys.argv) < 2:
     exit(1)
 path = sys.argv[1];
 allowReflections = False
-time = 1000
+time = 500
 image = load(path)
 row, cow = image.shape
 mid = int(cow/2)
@@ -283,9 +283,9 @@ print("Image size: {}".format(image.shape))
 print(allowReflections)
 env = Environment(image, tranPos, 0, allowReflections)
 angleRange = (0, 360)
-step = 0.2
-angles = [x for x in range(angleRange[0], angleRange[1], step)]
-beams = makeBeams(image.shape, angleRange, step)
+accuracy = 360*5
+angles = np.linspace(angleRange[0], angleRange[1], accuracy).tolist()
+beams = makeBeams(image.shape, angleRange, accuracy)
 beams = [translate(beam, tranPos) for beam in beams]
 for beam in beams:
     env.createPulseWithTrajectory(tranPos, beam, 1, angles.pop(0))
