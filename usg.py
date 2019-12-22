@@ -110,7 +110,7 @@ class Environment:
                 n2 = self.cells[nextMove].density
                 T, R, reversePhase = calcCoeffients(n1, n2)
                 pulse.power = pulse.power * T
-                if R != 0:
+                if R != 0 and pulse.power > 1e-5:
                     print("Old pulse has power {}".format(T))
                     # create new pulse
                     if pulse.usesTrajectory:
@@ -157,7 +157,7 @@ env = Environment(image, tranPos, 0)
 env.createPulse(tranPos, (1,0))
 env.createPulse(tranPos, (1,0))
 env.log()
-env.runFor(200, False)
+env.runFor(10000, False)
 result = env.history
 print(env.history)
 cv2.imshow("Image", image)
