@@ -85,7 +85,7 @@ class Environment:
                 (self.pulses[position]).append(newPulse)
             else:
                 self.pulses[position] = [newPulse]
-            self.pulseIds.append(angle)
+            self.history[angle] = []
     def createPulse(self, position, direction, currentPosition = None):
         if currentPosition == None:
             newPulse = SoundPulse(1.0, position, direction)
@@ -99,12 +99,16 @@ class Environment:
         return self.pulses[pos]
     def readFromTransceiver(self):
         if not (self.transceiverLocation in self.pulses.keys()):
-            return 0.0
+            for angle in self.history.keys():
+                (self.history[angle]).append(0.0)
+            return
         pulsesInTransceiver = self.pulses[self.transceiverLocation]
-        sum = 0.0
+        sums = {key: 0.0 for key in self.history.keys()}
         for pulse in pulsesInTransceiver:
-            sum += pulse.power * pulse.phase
-        return sum
+            sums[pulse.angle] += pulse.power * pulse.phase
+        print(sums)
+        for (key, val) in sums.items():
+            (self.history[key]).append(val)
     def log(self):
         for pulseList in self.pulses.values():
             for pulse in pulseList:
@@ -133,7 +137,7 @@ class Environment:
                 # print(self.cells.shape)
                 row, cow = self.cells.shape
                 is_in_bonds = (pulseRow in range(0, row)) and (pulseCow in range(0, cow))
-                if not is_in_bonds or pulse.position == self.tranceiverLocation:
+                if not is_in_bonds or nextMove == self.tranceiverLocation:
                     print("out of bonds!")
                     continue
                 # calculate transmission coefficient
@@ -174,7 +178,7 @@ class Environment:
         self.time += 1
         self.readFromTransceiver()
     time = 0
-    history = []
+    history = dict()
     cells = []
     pulses = dict()
     angle = 0
@@ -260,7 +264,7 @@ beams = [translate(beam, tranPos) for beam in beams]
 for beam in beams:
     env.createPulseWithTrajectory(tranPos, beam, 1, angles.pop(0))
 env.runFor(time, True)
-result = env.history
+result = env.history[0]
 cv2.imshow("Image", image)
 plt.plot(range(0,len(result)),result)
 plt.show()
