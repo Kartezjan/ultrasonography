@@ -229,6 +229,7 @@ if len(sys.argv) >= 2:
 print("Transceiver location: {}".format(tranPos))
 print("Image size: {}".format(image.shape))
 print(allowReflections)
+trajectoies = makeBeams(image.shape, (-60, 60), 2)
 env = Environment(image, tranPos, 0, allowReflections)
 env.createPulse(tranPos, (1,0))
 env.createPulse(tranPos, (1,0))
