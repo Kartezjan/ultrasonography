@@ -4,6 +4,7 @@ def makeBeams(boundaries, angle_range, delta_angle):
     row, col = boundaries
     start_angle, end_angle = angle_range
     diagonal = math.ceil(math.sqrt((col**2)+(row**2)))
+    all_beams = list()
     for current_angle in range(start_angle,end_angle, delta_angle):
         one_beam = []
         current_angle = current_angle*math.pi/180

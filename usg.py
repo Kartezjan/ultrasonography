@@ -4,6 +4,8 @@ import sys
 import numpy as np
 from ast import literal_eval as make_tuple
 import operator
+from beam_maker import makeBeams
+
 
 def scanl(f, base, l):
     for x in l:
@@ -14,12 +16,14 @@ class SoundPulse:
     def __init__(self, power, position, trajectory, currentStep = None):
         self.power = power
         self.position = position
-        self.direction = trajectory
         if currentStep == None:
+            self.direction = trajectory
             self.usesTrajectory = False
         else:
             self.usesTrajectory = True
+            self.trajectory = trajectory
             self.currentStep = currentStep
+        self.angle = 0
     direction = (0,1)
     usesTrajectory = False
     power = 1
@@ -27,7 +31,10 @@ class SoundPulse:
     position = (0,0)
     currentStep = 0
     isReflection = False
+    angle = 0
 
+def translate(ll, t):
+    return [_add(e,t) for e in ll]
 def _add(a, b):
     return (a[0] + b[0], a[1] + b[1])
 def _mul(a, c):
@@ -67,15 +74,23 @@ class Environment:
         self.pulses = dict()
         self.transceiverLocation = transceiverLocation
         self.angle = operationalAngle
-        self. reflectedPulsesCanReflect = recursiveReflections
+        self.reflectedPulsesCanReflect = recursiveReflections
+        self.pulseIds = list()
     def getCell(self, pos):
         return self.cells[pos]
+    def createPulseWithTrajectory(self, position, direction, currentPosition, angle):
+            newPulse = SoundPulse(1.0, position, direction, currentPosition)
+            newPulse.angle = angle
+            if position in self.pulses.keys():
+                (self.pulses[position]).append(newPulse)
+            else:
+                self.pulses[position] = [newPulse]
+            self.pulseIds.append(angle)
     def createPulse(self, position, direction, currentPosition = None):
         if currentPosition == None:
             newPulse = SoundPulse(1.0, position, direction)
         else:
-            newPulse = SoundPulse(1.0, position, trajectory, currentPosition)
-        print("Created pulse {}".format(position))
+            newPulse = SoundPulse(1.0, position, direction, currentPosition)
         if position in self.pulses.keys():
             (self.pulses[position]).append(newPulse)
         else:
@@ -91,8 +106,10 @@ class Environment:
             sum += pulse.power * pulse.phase
         return sum
     def log(self):
-        print(self.pulses)
-        print("Next step")
+        for pulseList in self.pulses.values():
+            for pulse in pulseList:
+                nextPos = pulse.trajectory[pulse.currentStep]
+                print("Pulse: pos: {} power: {} reflected: {}, next pos: {} angle: {}".format(pulse.position, pulse.power, pulse.isReflection, nextPos, pulse.angle))
     def runFor(self, time, verbose = True):
         if time < 1:
             return
@@ -106,8 +123,7 @@ class Environment:
             for pulse in pulseList:
                 # move pulse
                 if pulse.usesTrajectory:
-                    nextMove = pulse.trajectory.pop(pulse.currentStep)
-                    pulse.currentStep += 1
+                    nextMove = pulse.trajectory[pulse.currentStep]
                 else:
                     nextMove = (pulse.position[0] + pulse.direction[0], pulse.position[1] + pulse.direction[1])
                 # check if pulse is out of bonds
@@ -117,7 +133,7 @@ class Environment:
                 # print(self.cells.shape)
                 row, cow = self.cells.shape
                 is_in_bonds = (pulseRow in range(0, row)) and (pulseCow in range(0, cow))
-                if not is_in_bonds:
+                if not is_in_bonds or nextMove == self.tranceiverLocation:
                     print("out of bonds!")
                     continue
                 # calculate transmission coefficient
@@ -129,11 +145,14 @@ class Environment:
                 if R != 0 and pulse_threshold and can_reflect:
                     # create new pulse
                     if pulse.usesTrajectory:
-                        currentStep = pulse.currentStep
-                        reflectedTrajectory = pulse.trajectory
+                        currentStep = len(pulse.trajectory) - pulse.currentStep
+                        reflectedTrajectory = pulse.trajectory.copy()
                         # Reverse trajectory of passing pulse to get reflected pulse's trajectory.
                         # Simple as that.
                         reflectedTrajectory.reverse()
+                        # Make sure it returns to the transceiver
+                        reflectedTrajectory.append(self.tranceiverLocation)
+                        print(pulse.trajectory[pulse.currentStep-1])
                         reflectedPulse = SoundPulse(pulse.power * R, pulse.trajectory[pulse.currentStep - 1], reflectedTrajectory, currentStep)
                     else:
                         reflectedDirection = _mul(pulse.direction, (-1))
@@ -142,8 +161,11 @@ class Environment:
                     if reversePhase:
                         reflectedPulse.phase = -1
                     reflectedPulse.isReflection = True
+                    reflectedPulse.angle = pulse.angle
                     print("Created new pulse via reflection {} - power {}".format(reflectedPulse.position, reflectedPulse.power))
+                    print("Old pulse position: {}".format(pulse.position))
                     localPulses = appendPulse(localPulses, reflectedPulse)
+                pulse.currentStep += 1
                 pulse.power = pulse.power * T
                 pulse.position = nextMove
                 if pulse.power > 0:
@@ -229,11 +251,15 @@ if len(sys.argv) >= 2:
 print("Transceiver location: {}".format(tranPos))
 print("Image size: {}".format(image.shape))
 print(allowReflections)
-trajectoies = makeBeams(image.shape, (-60, 60), 2)
 env = Environment(image, tranPos, 0, allowReflections)
-env.createPulse(tranPos, (1,0))
-env.createPulse(tranPos, (1,0))
-env.runFor(time, False)
+angleRange = (0, 360)
+step = 1
+angles = [x for x in range(angleRange[0], angleRange[1], step)]
+beams = makeBeams(image.shape, angleRange, step)
+beams = [translate(beam, tranPos) for beam in beams]
+for beam in beams:
+    env.createPulseWithTrajectory(tranPos, beam, 1, angles.pop(0))
+env.runFor(time, True)
 result = env.history
 cv2.imshow("Image", image)
 plt.plot(range(0,len(result)),result)
