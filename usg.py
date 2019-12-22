@@ -100,9 +100,9 @@ class Environment:
     def readFromTransceiver(self):
         if not (self.transceiverLocation in self.pulses.keys()):
             return 0.0
-        pulses = self.pulses[self.transceiverLocation]
+        pulsesInTransceiver = self.pulses[self.transceiverLocation]
         sum = 0.0
-        for pulse in pulses:
+        for pulse in pulsesInTransceiver:
             sum += pulse.power * pulse.phase
         return sum
     def log(self):
@@ -133,7 +133,7 @@ class Environment:
                 # print(self.cells.shape)
                 row, cow = self.cells.shape
                 is_in_bonds = (pulseRow in range(0, row)) and (pulseCow in range(0, cow))
-                if not is_in_bonds or nextMove == self.tranceiverLocation:
+                if not is_in_bonds or pulse.position == self.tranceiverLocation:
                     print("out of bonds!")
                     continue
                 # calculate transmission coefficient
@@ -172,7 +172,7 @@ class Environment:
                     localPulses = appendPulse(localPulses, pulse)
         self.pulses = localPulses
         self.time += 1
-        self.history.append(self.readFromTransceiver())
+        self.readFromTransceiver()
     time = 0
     history = []
     cells = []
