@@ -213,9 +213,16 @@ def makeImage(transceiverHistory):
     plt.plot(range(0,len(strip)), strip)
     plt.show()
 
+def deleteZeros(image,time):
+    image_new = image[~np.all(image == 0, axis=1)]
+    #image_new2 = image_new[~np.all(image_new == 0, axis=0)]
+    row,cow = image_new.shape
+    image_new2 = image_new[0:row, int(1.1*time):cow-int(1.1*time)]
+    return image_new2
+
 def makeImage2D(transceiverHistory, time):
-    mid = (int(time/2), int(time/2))
-    r = time*2 # Inscibed circle
+    mid = (int(0), int(time*2))
+    r = time*4 # Inscibed circle
     image = np.zeros((r, r), dtype=np.float).reshape((r,r))
     for angle, angleHistory in transceiverHistory.items():
         integrated = list(scanl(operator.add, 0.0, angleHistory))
@@ -224,8 +231,11 @@ def makeImage2D(transceiverHistory, time):
             # Translate to center.
             point = _add(point, mid)
             image[point] += integrated[i]
+    n_image = deleteZeros(image,time)
     normalized = normalizeImage(image)
     cv2.imwrite('result.png', normalized)
+    normalized = normalizeImage(n_image)
+    cv2.imwrite('result_crop.png', normalized)
 
 def print_help():
     print("usage: usg <image_path> [<flag> <flag_value>]")
@@ -291,7 +301,7 @@ for beam in beams:
     env.createPulseWithTrajectory(tranPos, beam, 1, angles.pop(0))
 env.runFor(time, True)
 result = env.history
-cv2.imshow("Image", image)
+#cv2.imshow("Image", image)
 #plt.plot(range(0,len(result)),result)
 #plt.show()
 makeImage2D(result, time)
