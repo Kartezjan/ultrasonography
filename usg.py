@@ -114,7 +114,7 @@ class Environment:
         for pulseList in self.pulses.values():
             for pulse in pulseList:
                 nextPos = pulse.trajectory[pulse.currentStep]
-                print("Pulse: pos: {} power: {} reflected: {}, next pos: {} angle: {}".format(pulse.position, pulse.power, pulse.isReflection, nextPos, pulse.angle))
+                #print("Pulse: pos: {} power: {} reflected: {}, next pos: {} angle: {}".format(pulse.position, pulse.power, pulse.isReflection, nextPos, pulse.angle))
     def runFor(self, time, verbose = True):
         if time < 1:
             return
@@ -177,6 +177,7 @@ class Environment:
                     localPulses = appendPulse(localPulses, pulse)
         self.pulses = localPulses
         self.time += 1
+        print(self.time)
         self.readFromTransceiver()
     time = 0
     history = dict()
